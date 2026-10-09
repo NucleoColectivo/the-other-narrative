@@ -2,13 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE AYUDA DE AUTORIZACIÓN ---
+    // --- FUNCIONES DE SEGURIDAD Y AUTORIZACIÓN ---
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Autorización por correo verificado de los miembros del equipo editorial
+    // Valida que el email pertenezca a la lista autorizada de administradores
     function isAuthorizedEmail() {
       return isSignedIn() && 
         request.auth.token.email != null && (
@@ -18,7 +18,7 @@ service cloud.firestore {
         );
     }
 
-    // Verifica rol de administrador en Firestore o por correo autorizado
+    // Verifica si el usuario es administrador por email directo o por registro en adminRoles
     function isAdmin() {
       return isAuthorizedEmail() || (
         isSignedIn() && 
@@ -29,58 +29,58 @@ service cloud.firestore {
 
     // --- ROLES ADMINISTRATIVOS ---
     match /adminRoles/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isAuthorizedEmail(); 
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthorizedEmail() || isAdmin(); 
     }
 
-    // --- CONTENIDO EDITORIAL Y PORTAFOLIO ---
+    // --- CONTENIDO EDITORIAL Y PORTAFOLIO (Lectura pública, mutaciones solo Admin) ---
     match /contentItems/{id} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /podcasts/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /projects/{id} {
       allow read: if true;
-      allow write: if isSignedIn();
-    }
-
-    match /resources/{id} {
-      allow read: if true;
-      allow create, delete: if isSignedIn();
-      // Permite tanto al equipo como a los visitantes públicos actualizar el contador de descargas
-      allow update: if true;
-    }
-
-    match /recognitions/{id} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /testimonials/{id} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /featuredVideos/{id} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /siteSettings/{id} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /resources/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // Permitir a visitantes públicos incrementar únicamente el contador de descargas
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadsCount'])
+      );
     }
 
     // --- MENSAJES DE CONTACTO ---
+    // Cualquier visitante público puede enviar mensajes, pero NADIE público puede leer o borrar
     match /messages/{id} {
       allow create: if true;
-      allow read, update, delete: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
 
-    // Regla de cierre de seguridad
+    // Regla de cierre de seguridad para cualquier otra ruta no declarada
     match /{document=**} {
       allow read, write: if false;
     }

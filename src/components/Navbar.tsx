@@ -5,21 +5,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-
-const navLinks = [
-  { name: 'Mirada', href: '/conciencia' },
-  { name: 'Áreas', href: '/experiencia' },
-  { name: 'Proyectos', href: '/proyectos' },
-  { name: 'Insights', href: '/blog' },
-  { name: 'Multimedia', href: '/multimedia' },
-  { name: 'Contacto', href: '/contacto' },
-];
+import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { defaultNavLinks } from '@/lib/default-settings';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  const { settings } = useSiteSettings();
+  const navLinks = (settings.navLinks && settings.navLinks.length > 0) ? settings.navLinks : defaultNavLinks;
 
   useEffect(() => {
     const handleScroll = () => {

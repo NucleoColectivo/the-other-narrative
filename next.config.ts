@@ -2,6 +2,9 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    devtoolSegmentExplorer: false,
+  },
   allowedDevOrigins: ['*.run.app', '*.us-east1.run.app', 'localhost:3000'],
   typescript: {
     ignoreBuildErrors: true,

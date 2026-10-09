@@ -76,11 +76,20 @@ export function Footer() {
             <div className="space-y-6">
               <span className="text-sm font-bold uppercase tracking-widest text-primary">Navegación</span>
               <ul className="space-y-4 text-sm font-medium uppercase tracking-widest text-white/60">
-                <li><Link href="/conciencia" className="hover:text-primary transition-colors">Mirada</Link></li>
-                <li><Link href="/experiencia" className="hover:text-primary transition-colors">Áreas</Link></li>
-                <li><Link href="/proyectos" className="hover:text-primary transition-colors">Proyectos</Link></li>
-                <li><Link href="/blog" className="hover:text-primary transition-colors">Insights</Link></li>
-                <li><Link href="/multimedia" className="hover:text-primary transition-colors">Multimedia</Link></li>
+                {(settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : [
+                  { name: 'Mirada', href: '/conciencia' },
+                  { name: 'Áreas', href: '/experiencia' },
+                  { name: 'Proyectos', href: '/proyectos' },
+                  { name: 'Insights', href: '/blog' },
+                  { name: 'Multimedia', href: '/multimedia' },
+                  { name: 'Recursos', href: '/recursos' }
+                ]).map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-primary transition-colors">
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="space-y-6">

@@ -37,7 +37,6 @@ import {
   Mail,
   CheckCircle,
   Clock,
-  Wand2,
   Copy,
   Layout,
   Eye,
@@ -54,7 +53,8 @@ import {
   Play,
   FileDown,
   BarChart3,
-  Layers
+  Layers,
+  GripVertical
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -70,12 +70,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-export interface EditorialOutput {
-  refinedText: string;
-  keyMessages: string[];
-  regenerativeInsight: string;
-}
 
 const AUTHORIZED_EMAILS = [
   'angelamgomez@gmail.com', 
@@ -214,11 +208,6 @@ export default function AdminDashboard() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [aiInput, setAiInput] = useState('');
-  const [aiResult, setAiResult] = useState<EditorialOutput | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [showAiAssistant, setShowAiAssistant] = useState(false);
-
   const [blogTitle, setBlogTitle] = useState('');
   const [blogExcerpt, setBlogExcerpt] = useState('');
   const [blogType, setBlogType] = useState('Reflexión');
@@ -234,20 +223,24 @@ export default function AdminDashboard() {
   const [podUrl, setPodUrl] = useState('');
   const [podGuest, setPodGuest] = useState('');
   const [podImage, setPodImage] = useState('');
+  const [podStatus, setPodStatus] = useState<'published' | 'draft'>('published');
 
   const [vidTitle, setVidTitle] = useState('');
   const [vidUrl, setVidUrl] = useState('');
   const [vidPlatform, setVidPlatform] = useState('YouTube');
+  const [vidStatus, setVidStatus] = useState<'published' | 'draft'>('published');
 
   const [projTitle, setProjTitle] = useState('');
   const [projDesc, setProjDesc] = useState('');
   const [projCategory, setProjCategory] = useState('');
   const [projImage, setProjImage] = useState('');
   const [projLink, setProjLink] = useState('');
+  const [projStatus, setProjStatus] = useState<'published' | 'draft'>('published');
 
   const [testQuote, setTestQuote] = useState('');
   const [testAuthorName, setTestAuthorName] = useState('');
   const [testAuthorTitle, setTestAuthorTitle] = useState('');
+  const [testStatus, setTestStatus] = useState<'published' | 'draft'>('published');
 
   // Estados para Recursos Descargables
   const [resTitle, setResTitle] = useState('');
@@ -257,6 +250,7 @@ export default function AdminDashboard() {
   const [resPages, setResPages] = useState('');
   const [resDownloadUrl, setResDownloadUrl] = useState('');
   const [resCoverImage, setResCoverImage] = useState('');
+  const [resStatus, setResStatus] = useState<'published' | 'draft'>('published');
 
   const blogQuery = useMemoFirebase(() => query(collection(firestore, 'contentItems'), orderBy('date', 'desc')), [firestore]);
   const { data: blogItems } = useCollection(blogQuery);
@@ -296,6 +290,17 @@ export default function AdminDashboard() {
       setEcosystemSettings({
         ...defaultSiteSettings,
         ...remoteSettingsData,
+        heroTitleHighlight1: remoteSettingsData.heroTitleHighlight1 || remoteSettingsData.heroHighlight1 || defaultSiteSettings.heroTitleHighlight1,
+        heroTitleHighlight2: remoteSettingsData.heroTitleHighlight2 || remoteSettingsData.heroHighlight2 || defaultSiteSettings.heroTitleHighlight2,
+        heroButtonPrimaryText: remoteSettingsData.heroButtonPrimaryText || remoteSettingsData.heroPrimaryBtnText || defaultSiteSettings.heroButtonPrimaryText,
+        heroButtonPrimaryLink: remoteSettingsData.heroButtonPrimaryLink || remoteSettingsData.heroPrimaryBtnLink || defaultSiteSettings.heroButtonPrimaryLink,
+        heroButtonSecondaryText: remoteSettingsData.heroButtonSecondaryText || remoteSettingsData.heroSecondaryBtnText || defaultSiteSettings.heroButtonSecondaryText,
+        heroButtonSecondaryLink: remoteSettingsData.heroButtonSecondaryLink || remoteSettingsData.heroSecondaryBtnLink || defaultSiteSettings.heroButtonSecondaryLink,
+        missionImage: remoteSettingsData.missionImage || remoteSettingsData.missionImageUrl || defaultSiteSettings.missionImage,
+        missionText: remoteSettingsData.missionText || remoteSettingsData.missionDescription || defaultSiteSettings.missionText,
+        navLinks: (remoteSettingsData.navLinks && remoteSettingsData.navLinks.length > 0)
+          ? remoteSettingsData.navLinks
+          : defaultSiteSettings.navLinks,
         featuredVideos: initialVideos.map(v => {
           if ((v.id === '0DmyalU2zL4' || v.youtubeId === '0DmyalU2zL4') && (!v.title || v.title.includes('HAY FESTIVAL') || v.title === 'Diálogos de Cambio')) {
             return { ...v, title: 'COP 16' };
@@ -307,24 +312,90 @@ export default function AdminDashboard() {
     }
   }, [remoteSettingsData, hasInitializedEcosystem]);
 
+  const handleUpdateNavLink = (index: number, field: 'name' | 'href', value: string) => {
+    setEcosystemSettings(prev => {
+      const current = prev.navLinks ? [...prev.navLinks] : [...(defaultSiteSettings.navLinks || [])];
+      current[index] = { ...current[index], [field]: value };
+      return { ...prev, navLinks: current };
+    });
+  };
+
+  const handleAddNavLink = () => {
+    setEcosystemSettings(prev => {
+      const current = prev.navLinks ? [...prev.navLinks] : [...(defaultSiteSettings.navLinks || [])];
+      current.push({ name: 'Nuevo Enlace', href: '/nuevo' });
+      return { ...prev, navLinks: current };
+    });
+  };
+
+  const handleRemoveNavLink = (index: number) => {
+    setEcosystemSettings(prev => {
+      const current = prev.navLinks ? [...prev.navLinks] : [...(defaultSiteSettings.navLinks || [])];
+      current.splice(index, 1);
+      return { ...prev, navLinks: current };
+    });
+  };
+
+  const handleMoveNavLink = (index: number, direction: 'up' | 'down') => {
+    setEcosystemSettings(prev => {
+      const current = prev.navLinks ? [...prev.navLinks] : [...(defaultSiteSettings.navLinks || [])];
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= current.length) return prev;
+      [current[index], current[target]] = [current[target], current[index]];
+      return { ...prev, navLinks: current };
+    });
+  };
+
   const saveEcosystemSettings = async () => {
     if (!firestore) return;
     setIsSavingEcosystem(true);
     try {
-      const sanitized = {
+      const heroId = extractYouTubeId(ecosystemSettings.heroVideoId);
+      const sanitized: SiteSettings = {
         ...ecosystemSettings,
-        heroVideoId: extractYouTubeId(ecosystemSettings.heroVideoId),
-        featuredVideos: ecosystemSettings.featuredVideos.map(v => ({
+        heroVideoId: heroId,
+        heroTitleLine1: ecosystemSettings.heroTitleLine1 || '',
+        heroTitleHighlight1: ecosystemSettings.heroTitleHighlight1 || ecosystemSettings.heroHighlight1 || '',
+        heroHighlight1: ecosystemSettings.heroTitleHighlight1 || ecosystemSettings.heroHighlight1 || '',
+        heroTitleLine2: ecosystemSettings.heroTitleLine2 || '',
+        heroTitleHighlight2: ecosystemSettings.heroTitleHighlight2 || ecosystemSettings.heroHighlight2 || '',
+        heroHighlight2: ecosystemSettings.heroTitleHighlight2 || ecosystemSettings.heroHighlight2 || '',
+        heroPurpose: ecosystemSettings.heroPurpose || '',
+        heroButtonPrimaryText: ecosystemSettings.heroButtonPrimaryText || ecosystemSettings.heroPrimaryBtnText || 'INSIGHTS',
+        heroPrimaryBtnText: ecosystemSettings.heroButtonPrimaryText || ecosystemSettings.heroPrimaryBtnText || 'INSIGHTS',
+        heroButtonPrimaryLink: ecosystemSettings.heroButtonPrimaryLink || ecosystemSettings.heroPrimaryBtnLink || '/blog',
+        heroPrimaryBtnLink: ecosystemSettings.heroButtonPrimaryLink || ecosystemSettings.heroPrimaryBtnLink || '/blog',
+        heroButtonSecondaryText: ecosystemSettings.heroButtonSecondaryText || ecosystemSettings.heroSecondaryBtnText || 'NUESTRA MIRADA',
+        heroSecondaryBtnText: ecosystemSettings.heroButtonSecondaryText || ecosystemSettings.heroSecondaryBtnText || 'NUESTRA MIRADA',
+        heroButtonSecondaryLink: ecosystemSettings.heroButtonSecondaryLink || ecosystemSettings.heroSecondaryBtnLink || '#mission',
+        heroSecondaryBtnLink: ecosystemSettings.heroButtonSecondaryLink || ecosystemSettings.heroSecondaryBtnLink || '#mission',
+        missionEyebrow: ecosystemSettings.missionEyebrow || 'EL DESAFÍO',
+        missionTitle: ecosystemSettings.missionTitle || 'Articular',
+        missionTitleHighlight: ecosystemSettings.missionTitleHighlight || 'Realidades.',
+        missionImage: ecosystemSettings.missionImage || ecosystemSettings.missionImageUrl || defaultSiteSettings.missionImage,
+        missionImageUrl: ecosystemSettings.missionImage || ecosystemSettings.missionImageUrl || defaultSiteSettings.missionImage,
+        missionText: ecosystemSettings.missionText || ecosystemSettings.missionDescription || defaultSiteSettings.missionText,
+        missionDescription: ecosystemSettings.missionText || ecosystemSettings.missionDescription || defaultSiteSettings.missionText,
+        missionQuote: ecosystemSettings.missionQuote || defaultSiteSettings.missionQuote,
+        areasEyebrow: ecosystemSettings.areasEyebrow || 'ÁREAS DE TRABAJO',
+        areasTitle: ecosystemSettings.areasTitle || 'Impacto',
+        areasTitleHighlight: ecosystemSettings.areasTitleHighlight || 'Estratégico.',
+        areasDescription: ecosystemSettings.areasDescription || defaultSiteSettings.areasDescription,
+        areasImage: ecosystemSettings.areasImage || '/images/impacto-estrategico.jpg',
+        featuredVideos: (ecosystemSettings.featuredVideos || defaultSiteSettings.featuredVideos).map(v => ({
           ...v,
-          youtubeId: extractYouTubeId(v.youtubeId)
+          youtubeId: extractYouTubeId(v.youtubeId || v.id)
         })),
+        navLinks: (ecosystemSettings.navLinks && ecosystemSettings.navLinks.length > 0)
+          ? ecosystemSettings.navLinks
+          : defaultSiteSettings.navLinks,
         updatedAt: serverTimestamp()
       };
       await setDoc(doc(firestore, 'siteSettings', 'general'), sanitized, { merge: true });
       setEcosystemSettings(sanitized);
       toast({
         title: "¡Configuración Guardada!",
-        description: "El ecosistema global y la portada se han sincronizado con éxito.",
+        description: "El ecosistema global, menús y portada se han sincronizado con éxito.",
       });
     } catch (err: any) {
       console.error(err);
@@ -392,11 +463,30 @@ export default function AdminDashboard() {
     setBlogStatus('published');
     setBlocks([{ id: 'reset', type: 'text', content: '', alignment: 'justify' }]);
     setPodTitle(''); setPodDescription(''); setPodUrl(''); setPodGuest(''); setPodImage('');
+    setPodStatus('published');
     setVidTitle(''); setVidUrl(''); setVidPlatform('YouTube');
+    setVidStatus('published');
     setProjTitle(''); setProjDesc(''); setProjCategory(''); setProjImage(''); setProjLink('');
+    setProjStatus('published');
     setTestQuote(''); setTestAuthorName(''); setTestAuthorTitle('');
+    setTestStatus('published');
     setResTitle(''); setResDescription(''); setResCategory('Toolkit'); setResFormat('PDF Editorial'); setResPages(''); setResDownloadUrl(''); setResCoverImage('');
+    setResStatus('published');
     setActiveForm('none');
+  };
+
+  const startEditBlogPost = (item: any) => {
+    setEditingId(item.id);
+    setBlogTitle(item.title || '');
+    setBlogExcerpt(item.excerpt || '');
+    setBlogType(item.type || 'Reflexión');
+    setBlogImage(item.image || '');
+    setBlogStatus(item.status === 'draft' ? 'draft' : 'published');
+    setBlogAuthorName(item.authorName || 'Ángela María Gómez Duque');
+    setBlogAuthorTitle(item.authorTitle || 'Periodista experta en regeneración');
+    setBlocks([{ id: 'edit-1', type: 'text', content: item.body || '', alignment: 'justify' }]);
+    setActiveForm('blog');
+    setActiveTab('content');
   };
 
   const toggleArticleStatus = async (id: string, currentStatus: string = 'published') => {
@@ -418,6 +508,96 @@ export default function AdminDashboard() {
         title: "Error al actualizar estado",
         description: err?.message || "No se pudo cambiar el estado."
       });
+    }
+  };
+
+  const toggleProjectStatus = async (id: string, currentStatus: string = 'published') => {
+    const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+    try {
+      await updateDoc(doc(firestore, 'projects', id), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      toast({
+        title: newStatus === 'published' ? "Proyecto Publicado" : "Movido a Borrador",
+        description: newStatus === 'published' 
+          ? "El proyecto ya es visible en el portafolio público." 
+          : "El proyecto ahora está reservado como borrador interno."
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al actualizar estado", description: err?.message || "No se pudo cambiar el estado." });
+    }
+  };
+
+  const togglePodcastStatus = async (id: string, currentStatus: string = 'published') => {
+    const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+    try {
+      await updateDoc(doc(firestore, 'podcasts', id), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      toast({
+        title: newStatus === 'published' ? "Episodio Publicado" : "Movido a Borrador",
+        description: newStatus === 'published' 
+          ? "El episodio ya es visible en la sección multimedia." 
+          : "El episodio ahora está reservado como borrador interno."
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al actualizar estado", description: err?.message || "No se pudo cambiar el estado." });
+    }
+  };
+
+  const toggleTestimonialStatus = async (id: string, currentStatus: string = 'published') => {
+    const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+    try {
+      await updateDoc(doc(firestore, 'testimonials', id), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      toast({
+        title: newStatus === 'published' ? "Testimonio Publicado" : "Movido a Borrador",
+        description: newStatus === 'published' 
+          ? "El testimonio ya es visible en la web pública." 
+          : "El testimonio ahora está reservado como borrador interno."
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al actualizar estado", description: err?.message || "No se pudo cambiar el estado." });
+    }
+  };
+
+  const toggleVideoStatus = async (id: string, currentStatus: string = 'published') => {
+    const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+    try {
+      await updateDoc(doc(firestore, 'featuredVideos', id), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      toast({
+        title: newStatus === 'published' ? "Video Publicado" : "Movido a Borrador",
+        description: newStatus === 'published' 
+          ? "El video ya es visible en la sección multimedia." 
+          : "El video ahora está reservado como borrador interno."
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al actualizar estado", description: err?.message || "No se pudo cambiar el estado." });
+    }
+  };
+
+  const toggleResourceStatus = async (id: string, currentStatus: string = 'published') => {
+    const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+    try {
+      await updateDoc(doc(firestore, 'resources', id), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      toast({
+        title: newStatus === 'published' ? "Recurso Publicado" : "Movido a Borrador",
+        description: newStatus === 'published' 
+          ? "El recurso ya es visible en la biblioteca pública." 
+          : "El recurso ahora está reservado como borrador interno."
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al actualizar estado", description: err?.message || "No se pudo cambiar el estado." });
     }
   };
 
@@ -467,41 +647,24 @@ export default function AdminDashboard() {
     }).finally(() => setIsSaving(false));
   };
 
-  const handleAiRefinement = async () => {
-    if (!aiInput) {
-      toast({ variant: "destructive", title: "Error", description: "Ingresa un borrador para refinar." });
+  const confirmDeleteItem = async (collectionName: string, id: string, title?: string) => {
+    const label = title ? `"${title}"` : 'este elemento';
+    if (!window.confirm(`¿Estás seguro de eliminar ${label}? Esta acción lo borrará permanentemente de Firestore.`)) {
       return;
     }
-    setIsAiLoading(true);
     try {
-      const response = await fetch('/api/ai/editorial-assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiInput }),
+      await deleteDoc(doc(firestore, collectionName, id));
+      toast({
+        title: "Eliminado con éxito",
+        description: "El elemento fue retirado de la base de datos."
       });
-      if (!response.ok) {
-        throw new Error('Error en el servicio de refinamiento editorial');
-      }
-      const res: EditorialOutput = await response.json();
-      setAiResult(res);
-      toast({ title: "Refinamiento Completado", description: "La IA ha procesado tu narrativa." });
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Error IA", description: "No se pudo conectar con el Laboratorio Editorial IA." });
-    } finally {
-      setIsAiLoading(false);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: err?.message || "No se pudo eliminar el elemento."
+      });
     }
-  };
-
-  const transferAiToEditor = () => {
-    if (!aiResult) return;
-    const newBlocks: ContentBlock[] = [
-      { id: 'ai-1', type: 'text', content: aiResult.refinedText, alignment: 'justify' },
-      { id: 'ai-2', type: 'quote', content: aiResult.regenerativeInsight, alignment: 'left' }
-    ];
-    setBlocks(newBlocks);
-    setShowAiAssistant(false);
-    toast({ title: "Narrativa Transferida", description: "El texto refinado ahora está en el editor." });
   };
 
   const savePodcast = () => {
@@ -510,50 +673,164 @@ export default function AdminDashboard() {
       return;
     }
     setIsSaving(true);
-    addDoc(collection(firestore, 'podcasts'), {
+    const data = {
       title: podTitle,
-      description: podDescription,
+      description: podDescription || '',
       url: podUrl,
-      guest: podGuest,
-      image: podImage,
-      createdAt: serverTimestamp()
-    }).then(() => {
-      toast({ title: "Éxito", description: "Podcast publicado." });
+      guest: podGuest || '',
+      image: podImage || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/10%20Laboratorio%20Editorial.png',
+      status: podStatus || 'published',
+      updatedAt: serverTimestamp()
+    };
+    const action = editingId
+      ? updateDoc(doc(firestore, 'podcasts', editingId), data)
+      : addDoc(collection(firestore, 'podcasts'), { ...data, createdAt: serverTimestamp() });
+
+    action.then(() => {
+      toast({ 
+        title: editingId ? "Podcast Actualizado" : "Podcast Publicado", 
+        description: editingId ? "Los cambios se han guardado con éxito." : "El episodio ya está disponible en la sección multimedia." 
+      });
       cancelEditing();
       setActiveTab('inventory');
+    }).catch(err => {
+      toast({ variant: "destructive", title: "Error al guardar", description: err?.message || "No se pudo guardar el podcast." });
     }).finally(() => setIsSaving(false));
+  };
+
+  const startEditPodcast = (item: any) => {
+    setEditingId(item.id);
+    setPodTitle(item.title || '');
+    setPodDescription(item.description || '');
+    setPodUrl(item.url || '');
+    setPodGuest(item.guest || '');
+    setPodImage(item.image || '');
+    setPodStatus(item.status === 'draft' ? 'draft' : 'published');
+    setActiveForm('podcast');
+    setActiveTab('content');
   };
 
   const saveProject = () => {
-    if (!projTitle) return;
+    if (!projTitle) {
+      toast({ variant: "destructive", title: "Error", description: "El título del proyecto es obligatorio." });
+      return;
+    }
     setIsSaving(true);
-    addDoc(collection(firestore, 'projects'), {
+    const data = {
       title: projTitle,
-      description: projDesc,
-      category: projCategory,
-      image: projImage,
-      link: projLink,
-      createdAt: serverTimestamp()
-    }).then(() => {
-      toast({ title: "Éxito", description: "Proyecto guardado." });
+      description: projDesc || '',
+      category: projCategory || 'Iniciativa',
+      image: projImage || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/03.png',
+      link: projLink || '',
+      status: projStatus || 'published',
+      updatedAt: serverTimestamp()
+    };
+    const action = editingId
+      ? updateDoc(doc(firestore, 'projects', editingId), data)
+      : addDoc(collection(firestore, 'projects'), { ...data, createdAt: serverTimestamp() });
+
+    action.then(() => {
+      toast({ 
+        title: editingId ? "Proyecto Actualizado" : "Proyecto Guardado", 
+        description: editingId ? "Los cambios se han guardado con éxito." : "El proyecto ya aparece en el portafolio público." 
+      });
       cancelEditing();
       setActiveTab('inventory');
+    }).catch(err => {
+      toast({ variant: "destructive", title: "Error al guardar", description: err?.message || "No se pudo guardar el proyecto." });
     }).finally(() => setIsSaving(false));
   };
 
+  const startEditProject = (item: any) => {
+    setEditingId(item.id);
+    setProjTitle(item.title || '');
+    setProjDesc(item.description || '');
+    setProjCategory(item.category || '');
+    setProjImage(item.image || '');
+    setProjLink(item.link || '');
+    setProjStatus(item.status === 'draft' ? 'draft' : 'published');
+    setActiveForm('project');
+    setActiveTab('content');
+  };
+
   const saveTestimonial = () => {
-    if (!testQuote || !testAuthorName) return;
+    if (!testQuote || !testAuthorName) {
+      toast({ variant: "destructive", title: "Error", description: "La cita y el nombre del autor son obligatorios." });
+      return;
+    }
     setIsSaving(true);
-    addDoc(collection(firestore, 'testimonials'), {
+    const data = {
       quote: testQuote,
       authorName: testAuthorName,
-      authorTitle: testAuthorTitle,
-      createdAt: serverTimestamp()
-    }).then(() => {
-      toast({ title: "Éxito", description: "Testimonio guardado." });
+      authorTitle: testAuthorTitle || '',
+      status: testStatus || 'published',
+      updatedAt: serverTimestamp()
+    };
+    const action = editingId
+      ? updateDoc(doc(firestore, 'testimonials', editingId), data)
+      : addDoc(collection(firestore, 'testimonials'), { ...data, createdAt: serverTimestamp() });
+
+    action.then(() => {
+      toast({ 
+        title: editingId ? "Testimonio Actualizado" : "Testimonio Guardado", 
+        description: editingId ? "Los cambios se han guardado con éxito." : "El testimonio ya aparece en la sección de confianza." 
+      });
       cancelEditing();
       setActiveTab('inventory');
+    }).catch(err => {
+      toast({ variant: "destructive", title: "Error al guardar", description: err?.message || "No se pudo guardar el testimonio." });
     }).finally(() => setIsSaving(false));
+  };
+
+  const startEditTestimonial = (item: any) => {
+    setEditingId(item.id);
+    setTestQuote(item.quote || '');
+    setTestAuthorName(item.authorName || '');
+    setTestAuthorTitle(item.authorTitle || '');
+    setTestStatus(item.status === 'draft' ? 'draft' : 'published');
+    setActiveForm('testimonial');
+    setActiveTab('content');
+  };
+
+  const saveVideo = () => {
+    if (!vidTitle || !vidUrl) {
+      toast({ variant: "destructive", title: "Error", description: "Título y URL del video son obligatorios." });
+      return;
+    }
+    setIsSaving(true);
+    const ytId = extractYouTubeId(vidUrl);
+    const data = {
+      title: vidTitle,
+      url: vidUrl,
+      platform: vidPlatform || 'YouTube',
+      thumbnail: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/05.png',
+      status: vidStatus || 'published',
+      updatedAt: serverTimestamp()
+    };
+    const action = editingId
+      ? updateDoc(doc(firestore, 'featuredVideos', editingId), data)
+      : addDoc(collection(firestore, 'featuredVideos'), { ...data, createdAt: serverTimestamp() });
+
+    action.then(() => {
+      toast({ 
+        title: editingId ? "Video Actualizado" : "Video Publicado", 
+        description: editingId ? "Los cambios se han guardado con éxito." : "El video ya está visible en la sección multimedia." 
+      });
+      cancelEditing();
+      setActiveTab('inventory');
+    }).catch(err => {
+      toast({ variant: "destructive", title: "Error al guardar", description: err?.message || "No se pudo guardar el video." });
+    }).finally(() => setIsSaving(false));
+  };
+
+  const startEditVideo = (item: any) => {
+    setEditingId(item.id);
+    setVidTitle(item.title || '');
+    setVidUrl(item.url || '');
+    setVidPlatform(item.platform || 'YouTube');
+    setVidStatus(item.status === 'draft' ? 'draft' : 'published');
+    setActiveForm('video');
+    setActiveTab('content');
   };
 
   const saveResource = () => {
@@ -570,6 +847,7 @@ export default function AdminDashboard() {
       pages: resPages || '',
       downloadUrl: resDownloadUrl,
       coverImage: resCoverImage || '',
+      status: resStatus || 'published',
       updatedAt: serverTimestamp()
     };
 
@@ -598,6 +876,7 @@ export default function AdminDashboard() {
     setResPages(item.pages || '');
     setResDownloadUrl(item.downloadUrl || '');
     setResCoverImage(item.coverImage || '');
+    setResStatus(item.status === 'draft' ? 'draft' : 'published');
     setActiveForm('resource');
     setActiveTab('content');
   };
@@ -872,7 +1151,7 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Título Línea 1</Label>
                         <Input
-                          value={ecosystemSettings.heroTitleLine1}
+                          value={ecosystemSettings.heroTitleLine1 || ''}
                           onChange={e => setEcosystemSettings(prev => ({ ...prev, heroTitleLine1: e.target.value }))}
                           placeholder="Narrativas que generan"
                         />
@@ -880,8 +1159,8 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Resaltado 1 (Cursiva / Acento)</Label>
                         <Input
-                          value={ecosystemSettings.heroHighlight1}
-                          onChange={e => setEcosystemSettings(prev => ({ ...prev, heroHighlight1: e.target.value }))}
+                          value={ecosystemSettings.heroTitleHighlight1 || ecosystemSettings.heroHighlight1 || ''}
+                          onChange={e => setEcosystemSettings(prev => ({ ...prev, heroTitleHighlight1: e.target.value, heroHighlight1: e.target.value }))}
                           placeholder="confianza."
                         />
                       </div>
@@ -891,7 +1170,7 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Título Línea 2</Label>
                         <Input
-                          value={ecosystemSettings.heroTitleLine2}
+                          value={ecosystemSettings.heroTitleLine2 || ''}
                           onChange={e => setEcosystemSettings(prev => ({ ...prev, heroTitleLine2: e.target.value }))}
                           placeholder="Estrategias que movilizan"
                         />
@@ -899,8 +1178,8 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Resaltado 2 (Cursiva / Acento)</Label>
                         <Input
-                          value={ecosystemSettings.heroHighlight2}
-                          onChange={e => setEcosystemSettings(prev => ({ ...prev, heroHighlight2: e.target.value }))}
+                          value={ecosystemSettings.heroTitleHighlight2 || ecosystemSettings.heroHighlight2 || ''}
+                          onChange={e => setEcosystemSettings(prev => ({ ...prev, heroTitleHighlight2: e.target.value, heroHighlight2: e.target.value }))}
                           placeholder="personas."
                         />
                       </div>
@@ -910,7 +1189,7 @@ export default function AdminDashboard() {
                     <div className="space-y-2 pt-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest">Propósito Editorial / Subtítulo</Label>
                       <Textarea
-                        value={ecosystemSettings.heroPurpose}
+                        value={ecosystemSettings.heroPurpose || ''}
                         onChange={e => setEcosystemSettings(prev => ({ ...prev, heroPurpose: e.target.value }))}
                         rows={3}
                         placeholder="El cambio cultural y la sostenibilidad no ocurren por decreto..."
@@ -925,16 +1204,16 @@ export default function AdminDashboard() {
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase">Texto del Botón</Label>
                           <Input
-                            value={ecosystemSettings.heroPrimaryBtnText}
-                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroPrimaryBtnText: e.target.value }))}
+                            value={ecosystemSettings.heroButtonPrimaryText || ecosystemSettings.heroPrimaryBtnText || ''}
+                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroButtonPrimaryText: e.target.value, heroPrimaryBtnText: e.target.value }))}
                             placeholder="INSIGHTS"
                           />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase">Enlace de Destino</Label>
                           <Input
-                            value={ecosystemSettings.heroPrimaryBtnLink}
-                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroPrimaryBtnLink: e.target.value }))}
+                            value={ecosystemSettings.heroButtonPrimaryLink || ecosystemSettings.heroPrimaryBtnLink || ''}
+                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroButtonPrimaryLink: e.target.value, heroPrimaryBtnLink: e.target.value }))}
                             placeholder="/blog"
                           />
                         </div>
@@ -945,16 +1224,16 @@ export default function AdminDashboard() {
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase">Texto del Botón</Label>
                           <Input
-                            value={ecosystemSettings.heroSecondaryBtnText}
-                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroSecondaryBtnText: e.target.value }))}
+                            value={ecosystemSettings.heroButtonSecondaryText || ecosystemSettings.heroSecondaryBtnText || ''}
+                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroButtonSecondaryText: e.target.value, heroSecondaryBtnText: e.target.value }))}
                             placeholder="NUESTRA MIRADA"
                           />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase">Enlace de Destino</Label>
                           <Input
-                            value={ecosystemSettings.heroSecondaryBtnLink}
-                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroSecondaryBtnLink: e.target.value }))}
+                            value={ecosystemSettings.heroButtonSecondaryLink || ecosystemSettings.heroSecondaryBtnLink || ''}
+                            onChange={e => setEcosystemSettings(prev => ({ ...prev, heroButtonSecondaryLink: e.target.value, heroSecondaryBtnLink: e.target.value }))}
                             placeholder="#mission"
                           />
                         </div>
@@ -976,7 +1255,7 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Etiqueta Superior</Label>
                         <Input
-                          value={ecosystemSettings.missionEyebrow}
+                          value={ecosystemSettings.missionEyebrow || ''}
                           onChange={e => setEcosystemSettings(prev => ({ ...prev, missionEyebrow: e.target.value }))}
                           placeholder="EL DESAFÍO"
                         />
@@ -984,7 +1263,7 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Título Principal</Label>
                         <Input
-                          value={ecosystemSettings.missionTitle}
+                          value={ecosystemSettings.missionTitle || ''}
                           onChange={e => setEcosystemSettings(prev => ({ ...prev, missionTitle: e.target.value }))}
                           placeholder="Articular"
                         />
@@ -992,7 +1271,7 @@ export default function AdminDashboard() {
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest">Resaltado (Cursiva)</Label>
                         <Input
-                          value={ecosystemSettings.missionTitleHighlight}
+                          value={ecosystemSettings.missionTitleHighlight || ''}
                           onChange={e => setEcosystemSettings(prev => ({ ...prev, missionTitleHighlight: e.target.value }))}
                           placeholder="Realidades."
                         />
@@ -1002,8 +1281,8 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest">URL Imagen Editorial</Label>
                       <Input
-                        value={ecosystemSettings.missionImageUrl}
-                        onChange={e => setEcosystemSettings(prev => ({ ...prev, missionImageUrl: e.target.value }))}
+                        value={ecosystemSettings.missionImage || ecosystemSettings.missionImageUrl || ''}
+                        onChange={e => setEcosystemSettings(prev => ({ ...prev, missionImage: e.target.value, missionImageUrl: e.target.value }))}
                         placeholder="https://..."
                       />
                     </div>
@@ -1011,8 +1290,8 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest">Descripción del Desafío</Label>
                       <Textarea
-                        value={ecosystemSettings.missionDescription}
-                        onChange={e => setEcosystemSettings(prev => ({ ...prev, missionDescription: e.target.value }))}
+                        value={ecosystemSettings.missionText || ecosystemSettings.missionDescription || ''}
+                        onChange={e => setEcosystemSettings(prev => ({ ...prev, missionText: e.target.value, missionDescription: e.target.value }))}
                         rows={4}
                         placeholder="Vivimos en un ecosistema saturado de información..."
                       />
@@ -1021,7 +1300,7 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest">Cita / Manifiesto de Compromiso</Label>
                       <Textarea
-                        value={ecosystemSettings.missionQuote}
+                        value={ecosystemSettings.missionQuote || ''}
                         onChange={e => setEcosystemSettings(prev => ({ ...prev, missionQuote: e.target.value }))}
                         rows={3}
                         placeholder="No creemos en comunicar por comunicar..."
@@ -1272,6 +1551,98 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* 5. NAVEGACIÓN Y MENÚ PRINCIPAL */}
+                <Card className="rounded-sm border shadow-sm">
+                  <CardHeader className="border-b bg-muted/10 p-6 flex flex-row items-center justify-between">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-3">
+                      <Layout className="h-4 w-4 text-primary" /> Navegación del Menú Principal & Footer
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest">
+                      {(ecosystemSettings.navLinks || defaultSiteSettings.navLinks || []).length} Enlaces
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="p-8 space-y-6">
+                    <p className="text-xs text-muted-foreground">
+                      Administra los enlaces que se muestran en la barra de navegación superior (Navbar) y en la sección de navegación del pie de página (Footer). Los cambios se sincronizan en vivo sin necesidad de reprogramar código.
+                    </p>
+
+                    <div className="space-y-4">
+                      {(ecosystemSettings.navLinks || defaultSiteSettings.navLinks || []).map((link, idx) => (
+                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-3 p-4 bg-muted/10 border rounded-sm">
+                          <div className="flex items-center gap-1 self-start sm:self-center">
+                            <span className="text-xs font-mono font-bold text-muted-foreground w-6">0{idx + 1}</span>
+                            <div className="flex flex-col gap-0.5">
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                disabled={idx === 0} 
+                                onClick={() => handleMoveNavLink(idx, 'up')}
+                                title="Subir orden"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                disabled={idx === (ecosystemSettings.navLinks || defaultSiteSettings.navLinks || []).length - 1} 
+                                onClick={() => handleMoveNavLink(idx, 'down')}
+                                title="Bajar orden"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                            <div className="space-y-1">
+                              <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Etiqueta</Label>
+                              <Input
+                                value={link.name}
+                                onChange={e => handleUpdateNavLink(idx, 'name', e.target.value)}
+                                placeholder="Ej: Mirada"
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Ruta / URL</Label>
+                              <Input
+                                value={link.href}
+                                onChange={e => handleUpdateNavLink(idx, 'href', e.target.value)}
+                                placeholder="Ej: /conciencia"
+                                className="h-9 font-mono text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 self-end sm:self-center"
+                            onClick={() => handleRemoveNavLink(idx)}
+                            title="Eliminar enlace"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddNavLink}
+                      className="w-full text-[10px] font-bold uppercase tracking-widest h-10 border-dashed"
+                    >
+                      <Plus className="mr-2 h-3.5 w-3.5" /> Agregar Enlace de Navegación
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Columna Derecha: Vista Previa y Estado de Publicación */}
@@ -1475,43 +1846,70 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    resourceItems.map(item => (
-                      <TableRow key={item.id} className="border-b hover:bg-muted/10 transition-colors">
-                        <TableCell className="pl-6 py-5">
-                          <div className="font-headline font-bold text-base text-foreground">{item.title}</div>
-                          <p className="text-xs text-muted-foreground font-light line-clamp-1 max-w-md mt-0.5">{item.description}</p>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded bg-primary/10 text-primary">
-                            {item.category || 'General'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs font-medium text-foreground">{item.format || 'PDF Editorial'}</div>
-                          {item.pages && <div className="text-[11px] text-muted-foreground">{item.pages}</div>}
-                        </TableCell>
-                        <TableCell className="text-center font-bold font-mono text-sm text-primary">
-                          {item.downloadsCount || 0}
-                        </TableCell>
-                        <TableCell className="text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            {item.downloadUrl && (
-                              <Button variant="ghost" size="icon" asChild title="Abrir Enlace">
-                                <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                </a>
+                    resourceItems.map(item => {
+                      const isDraft = item.status === 'draft';
+                      return (
+                        <TableRow key={item.id} className="border-b hover:bg-muted/10 transition-colors">
+                          <TableCell className="pl-6 py-5">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2.5">
+                                <h4 className="font-headline font-bold text-base text-foreground">{item.title}</h4>
+                                {isDraft ? (
+                                  <Badge variant="outline" className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                    Borrador
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                    Publicado
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground font-light line-clamp-1 max-w-md">{item.description}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded bg-primary/10 text-primary">
+                              {item.category || 'General'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs font-medium text-foreground">{item.format || 'PDF Editorial'}</div>
+                            {item.pages && <div className="text-[11px] text-muted-foreground">{item.pages}</div>}
+                          </TableCell>
+                          <TableCell className="text-center font-bold font-mono text-sm text-primary">
+                            {item.downloadsCount || 0}
+                          </TableCell>
+                          <TableCell className="text-right pr-6">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => toggleResourceStatus(item.id, item.status)}
+                                className={cn(
+                                  "h-8 text-xs font-semibold px-2.5",
+                                  isDraft ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-50" : "border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                                )}
+                              >
+                                {isDraft ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Publicar</span> : 'Despublicar'}
                               </Button>
-                            )}
-                            <Button variant="ghost" size="icon" onClick={() => startEditResource(item)} title="Editar Recurso">
-                              <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => deleteResource(item.id)} title="Eliminar Recurso">
-                              <Trash2 className="h-4 w-4 text-destructive hover:bg-destructive/10" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                              {item.downloadUrl && (
+                                <Button variant="ghost" size="icon" asChild title="Abrir Enlace">
+                                  <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                  </a>
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" onClick={() => startEditResource(item)} title="Editar Recurso">
+                                <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmDeleteItem('resources', item.id, item.title)} title="Eliminar Recurso">
+                                <Trash2 className="h-4 w-4 text-destructive hover:bg-destructive/10" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -1521,11 +1919,12 @@ export default function AdminDashboard() {
           <TabsContent value="inventory" className="animate-in fade-in duration-500">
             <Card className="rounded-sm overflow-hidden border shadow-xl">
                <Tabs defaultValue="inv-blog">
-                  <TabsList className="w-full justify-start border-b rounded-none h-16 bg-muted/5 p-0">
-                    <TabsTrigger value="inv-blog" className="h-full rounded-none px-12 text-[10px] font-bold uppercase tracking-widest">Bitácora</TabsTrigger>
-                    <TabsTrigger value="inv-proj" className="h-full rounded-none px-12 text-[10px] font-bold uppercase tracking-widest">Proyectos</TabsTrigger>
-                    <TabsTrigger value="inv-test" className="h-full rounded-none px-12 text-[10px] font-bold uppercase tracking-widest">Testimonios</TabsTrigger>
-                    <TabsTrigger value="inv-pod" className="h-full rounded-none px-12 text-[10px] font-bold uppercase tracking-widest">Podcast</TabsTrigger>
+                  <TabsList className="w-full justify-start border-b rounded-none h-16 bg-muted/5 p-0 flex flex-wrap">
+                    <TabsTrigger value="inv-blog" className="h-full rounded-none px-8 text-[10px] font-bold uppercase tracking-widest">Bitácora ({blogItems?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="inv-proj" className="h-full rounded-none px-8 text-[10px] font-bold uppercase tracking-widest">Proyectos ({projectItems?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="inv-test" className="h-full rounded-none px-8 text-[10px] font-bold uppercase tracking-widest">Testimonios ({testimonialItems?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="inv-pod" className="h-full rounded-none px-8 text-[10px] font-bold uppercase tracking-widest">Podcast ({podItems?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="inv-vid" className="h-full rounded-none px-8 text-[10px] font-bold uppercase tracking-widest">Videos ({videoItems?.length || 0})</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="inv-blog" className="p-0">
@@ -1640,23 +2039,12 @@ export default function AdminDashboard() {
                                       </Link>
 
                                       {/* Editar en CMS */}
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar en CMS" onClick={() => {
-                                        setEditingId(item.id);
-                                        setBlogTitle(item.title);
-                                        setBlogExcerpt(item.excerpt);
-                                        setBlogType(item.type);
-                                        setBlogImage(item.image);
-                                        setBlogStatus(item.status === 'draft' ? 'draft' : 'published');
-                                        // Simplified block reconstruction from HTML
-                                        setBlocks([{ id: 'edit-1', type: 'text', content: item.body, alignment: 'justify' }]);
-                                        setActiveForm('blog');
-                                        setActiveTab('content');
-                                      }}>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar en CMS" onClick={() => startEditBlogPost(item)}>
                                         <Pencil className="h-4 w-4" />
                                       </Button>
 
-                                      {/* Eliminar */}
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" title="Eliminar crónica" onClick={() => deleteDoc(doc(firestore, 'contentItems', item.id))}>
+                                      {/* Eliminar con confirmación */}
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" title="Eliminar crónica" onClick={() => confirmDeleteItem('contentItems', item.id, item.title)}>
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </div>
@@ -1670,92 +2058,340 @@ export default function AdminDashboard() {
                   </TabsContent>
 
                   <TabsContent value="inv-proj" className="p-0">
+                    <div className="p-6 bg-muted/10 border-b flex justify-between items-center">
+                      <div>
+                        <h4 className="font-headline font-bold text-sm">Portafolio de Proyectos</h4>
+                        <p className="text-xs text-muted-foreground">Casos técnicos y consultorías visibles en /proyectos</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          cancelEditing();
+                          setProjStatus('published');
+                          setActiveForm('project');
+                          setActiveTab('content');
+                        }}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nuevo Proyecto
+                      </Button>
+                    </div>
                     <Table>
                       <TableBody>
                         {(!projectItems || projectItems.length === 0) ? (
-                          <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay proyectos registrados.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay proyectos registrados en Firestore.</TableCell></TableRow>
                         ) : (
-                          projectItems.map(item => (
-                            <TableRow key={item.id} className="border-b">
-                              <TableCell className="pl-12 py-6">
-                                <div className="flex items-center gap-6">
-                                  {item.image && (
-                                    <div className="relative w-16 h-12 rounded-sm overflow-hidden bg-muted flex-shrink-0 border">
-                                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                          projectItems.map(item => {
+                            const isDraft = item.status === 'draft';
+                            return (
+                              <TableRow key={item.id} className="border-b hover:bg-muted/5">
+                                <TableCell className="pl-8 py-5">
+                                  <div className="flex items-center gap-5">
+                                    {item.image && (
+                                      <div className="relative w-16 h-12 rounded-sm overflow-hidden bg-muted flex-shrink-0 border">
+                                        <Image src={item.image} alt={item.title} fill className="object-cover" />
+                                      </div>
+                                    )}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2.5">
+                                        <h4 className="font-headline text-base font-bold">{item.title}</h4>
+                                        {isDraft ? (
+                                          <Badge variant="outline" className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Borrador
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Publicado
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground line-clamp-1">{item.description || item.category}</p>
                                     </div>
-                                  )}
-                                  <div>
-                                    <h4 className="font-headline text-lg font-bold">{item.title}</h4>
-                                    <p className="text-xs text-muted-foreground">{item.category}</p>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right pr-12">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => deleteDoc(doc(firestore, 'projects', item.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                                </TableCell>
+                                <TableCell className="text-right pr-8">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => toggleProjectStatus(item.id, item.status)}
+                                      className={cn(
+                                        "h-8 text-xs font-semibold px-2.5",
+                                        isDraft ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-50" : "border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                                      )}
+                                    >
+                                      {isDraft ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Publicar</span> : 'Despublicar'}
+                                    </Button>
+                                    {item.link && (
+                                      <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                                        <a href={item.link} target="_blank" rel="noopener noreferrer" title="Ver enlace">
+                                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditProject(item)} title="Editar proyecto">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => confirmDeleteItem('projects', item.id, item.title)} title="Eliminar proyecto">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
                   </TabsContent>
 
                   <TabsContent value="inv-test" className="p-0">
+                    <div className="p-6 bg-muted/10 border-b flex justify-between items-center">
+                      <div>
+                        <h4 className="font-headline font-bold text-sm">Testimonios de Confianza</h4>
+                        <p className="text-xs text-muted-foreground">Palabras de líderes y clientes visibles en /conciencia</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          cancelEditing();
+                          setTestStatus('published');
+                          setActiveForm('testimonial');
+                          setActiveTab('content');
+                        }}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nuevo Testimonio
+                      </Button>
+                    </div>
                     <Table>
                       <TableBody>
                         {(!testimonialItems || testimonialItems.length === 0) ? (
-                          <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay testimonios registrados.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay testimonios registrados en Firestore.</TableCell></TableRow>
                         ) : (
-                          testimonialItems.map(item => (
-                            <TableRow key={item.id} className="border-b">
-                              <TableCell className="pl-12 py-6">
-                                <div>
-                                  <h4 className="font-headline text-base font-bold italic">&ldquo;{item.quote}&rdquo;</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">{item.authorName} — {item.authorTitle}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right pr-12">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => deleteDoc(doc(firestore, 'testimonials', item.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                          testimonialItems.map(item => {
+                            const isDraft = item.status === 'draft';
+                            return (
+                              <TableRow key={item.id} className="border-b hover:bg-muted/5">
+                                <TableCell className="pl-8 py-5">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2.5">
+                                      <h4 className="font-headline text-base font-bold italic line-clamp-1">&ldquo;{item.quote}&rdquo;</h4>
+                                      {isDraft ? (
+                                        <Badge variant="outline" className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                          Borrador
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                          Publicado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{item.authorName} — {item.authorTitle}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right pr-8">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => toggleTestimonialStatus(item.id, item.status)}
+                                      className={cn(
+                                        "h-8 text-xs font-semibold px-2.5",
+                                        isDraft ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-50" : "border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                                      )}
+                                    >
+                                      {isDraft ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Publicar</span> : 'Despublicar'}
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditTestimonial(item)} title="Editar testimonio">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => confirmDeleteItem('testimonials', item.id, item.authorName)} title="Eliminar testimonio">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
                   </TabsContent>
 
                   <TabsContent value="inv-pod" className="p-0">
+                    <div className="p-6 bg-muted/10 border-b flex justify-between items-center">
+                      <div>
+                        <h4 className="font-headline font-bold text-sm">Episodios de Podcast</h4>
+                        <p className="text-xs text-muted-foreground">Episodios de audio sincronizados en /multimedia</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          cancelEditing();
+                          setPodStatus('published');
+                          setActiveForm('podcast');
+                          setActiveTab('content');
+                        }}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nuevo Episodio
+                      </Button>
+                    </div>
                     <Table>
                       <TableBody>
                         {(!podItems || podItems.length === 0) ? (
                           <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay podcasts registrados en Firestore.</TableCell></TableRow>
                         ) : (
-                          podItems.map(item => (
-                            <TableRow key={item.id} className="border-b">
-                              <TableCell className="pl-12 py-6">
-                                <div className="flex items-center gap-6">
-                                  {item.image && (
-                                    <div className="relative w-12 h-12 rounded-sm overflow-hidden bg-muted flex-shrink-0 border">
-                                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                          podItems.map(item => {
+                            const isDraft = item.status === 'draft';
+                            return (
+                              <TableRow key={item.id} className="border-b hover:bg-muted/5">
+                                <TableCell className="pl-8 py-5">
+                                  <div className="flex items-center gap-5">
+                                    {item.image && (
+                                      <div className="relative w-12 h-12 rounded-sm overflow-hidden bg-muted flex-shrink-0 border">
+                                        <Image src={item.image} alt={item.title} fill className="object-cover" />
+                                      </div>
+                                    )}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2.5">
+                                        <h4 className="font-headline text-base font-bold">{item.title}</h4>
+                                        {isDraft ? (
+                                          <Badge variant="outline" className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Borrador
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Publicado
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {item.guest && <p className="text-xs text-muted-foreground">Con {item.guest}</p>}
                                     </div>
-                                  )}
-                                  <div>
-                                    <h4 className="font-headline text-base font-bold">{item.title}</h4>
-                                    {item.guest && <p className="text-xs text-muted-foreground">Con {item.guest}</p>}
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right pr-12">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => deleteDoc(doc(firestore, 'podcasts', item.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                                </TableCell>
+                                <TableCell className="text-right pr-8">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => togglePodcastStatus(item.id, item.status)}
+                                      className={cn(
+                                        "h-8 text-xs font-semibold px-2.5",
+                                        isDraft ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-50" : "border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                                      )}
+                                    >
+                                      {isDraft ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Publicar</span> : 'Despublicar'}
+                                    </Button>
+                                    {item.url && (
+                                      <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                                        <a href={item.url} target="_blank" rel="noopener noreferrer" title="Reproducir">
+                                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditPodcast(item)} title="Editar podcast">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => confirmDeleteItem('podcasts', item.id, item.title)} title="Eliminar podcast">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TabsContent>
+
+                  <TabsContent value="inv-vid" className="p-0">
+                    <div className="p-6 bg-muted/10 border-b flex justify-between items-center">
+                      <div>
+                        <h4 className="font-headline font-bold text-sm">Videos & Cápsulas Multimedia</h4>
+                        <p className="text-xs text-muted-foreground">Contenido audiovisual mostrado en la galería /multimedia</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          cancelEditing();
+                          setVidStatus('published');
+                          setActiveForm('video');
+                          setActiveTab('content');
+                        }}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nuevo Video
+                      </Button>
+                    </div>
+                    <Table>
+                      <TableBody>
+                        {(!videoItems || videoItems.length === 0) ? (
+                          <TableRow><TableCell colSpan={2} className="py-12 text-center text-muted-foreground text-sm">No hay videos registrados en Firestore.</TableCell></TableRow>
+                        ) : (
+                          videoItems.map(item => {
+                            const isDraft = item.status === 'draft';
+                            const ytId = extractYouTubeId(item.url || item.id);
+                            const thumb = item.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : '');
+                            return (
+                              <TableRow key={item.id} className="border-b hover:bg-muted/5">
+                                <TableCell className="pl-8 py-5">
+                                  <div className="flex items-center gap-5">
+                                    {thumb && (
+                                      <div className="relative w-16 h-10 rounded-sm overflow-hidden bg-black flex-shrink-0 border">
+                                        <Image src={thumb} alt={item.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                                      </div>
+                                    )}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2.5">
+                                        <h4 className="font-headline text-base font-bold">{item.title}</h4>
+                                        {isDraft ? (
+                                          <Badge variant="outline" className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Borrador
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
+                                            Publicado
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">{item.platform || 'YouTube'} • {item.url}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right pr-8">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => toggleVideoStatus(item.id, item.status)}
+                                      className={cn(
+                                        "h-8 text-xs font-semibold px-2.5",
+                                        isDraft ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-50" : "border-amber-500/40 text-amber-700 hover:bg-amber-50"
+                                      )}
+                                    >
+                                      {isDraft ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Publicar</span> : 'Despublicar'}
+                                    </Button>
+                                    {item.url && (
+                                      <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                                        <a href={item.url} target="_blank" rel="noopener noreferrer" title="Abrir video">
+                                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditVideo(item)} title="Editar video">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => confirmDeleteItem('featuredVideos', item.id, item.title)} title="Eliminar video">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
@@ -1769,34 +2405,27 @@ export default function AdminDashboard() {
                <div className="lg:col-span-3 space-y-4">
                  <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary">Contenedor Editorial</h3>
                  <div className="grid grid-cols-1 gap-3">
-                    <Button variant={activeForm === 'blog' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => setActiveForm('blog')}><BookOpen className="mr-4 h-4" /> Crónica</Button>
-                    <Button variant={activeForm === 'resource' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => setActiveForm('resource')}><FileDown className="mr-4 h-4" /> Recurso / Toolkit</Button>
-                    <Button variant={activeForm === 'project' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => setActiveForm('project')}><Briefcase className="mr-4 h-4" /> Proyecto</Button>
-                    <Button variant={activeForm === 'testimonial' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => setActiveForm('testimonial')}><QuoteIcon className="mr-4 h-4" /> Testimonio</Button>
-                    <Button variant={activeForm === 'podcast' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => setActiveForm('podcast')}><Radio className="mr-4 h-4" /> Podcast</Button>
+                    <Button variant={activeForm === 'blog' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('blog'); }}><BookOpen className="mr-4 h-4" /> Crónica</Button>
+                    <Button variant={activeForm === 'resource' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('resource'); }}><FileDown className="mr-4 h-4" /> Recurso / Toolkit</Button>
+                    <Button variant={activeForm === 'project' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('project'); }}><Briefcase className="mr-4 h-4" /> Proyecto</Button>
+                    <Button variant={activeForm === 'testimonial' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('testimonial'); }}><QuoteIcon className="mr-4 h-4" /> Testimonio</Button>
+                    <Button variant={activeForm === 'podcast' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('podcast'); }}><Radio className="mr-4 h-4" /> Podcast</Button>
+                    <Button variant={activeForm === 'video' ? 'default' : 'outline'} className="justify-start h-16 px-8 text-[10px] font-bold uppercase tracking-widest rounded-sm" onClick={() => { cancelEditing(); setActiveForm('video'); }}><Video className="mr-4 h-4" /> Video Multimedia</Button>
                  </div>
                </div>
 
                <div className="lg:col-span-9">
                  {activeForm === 'blog' && (
                    <div className="space-y-12 animate-in slide-in-from-right-8">
-                     <div className="flex justify-between items-center bg-muted/20 p-6 rounded-sm border mb-8">
-                       <div className="space-y-1">
-                         <h3 className="text-xl font-bold font-headline tracking-tighter">Editor de Crónicas</h3>
-                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Acompañamiento Narrativo Habilitado</p>
-                       </div>
-                       <Button 
-                        variant="outline" 
-                        onClick={() => setShowAiAssistant(!showAiAssistant)}
-                        className={cn("text-[9px] font-bold uppercase tracking-widest h-11 px-8 gap-3 transition-all", showAiAssistant ? "bg-primary text-white border-primary" : "text-primary border-primary/20")}
-                       >
-                         <Wand2 className="h-3.5 w-3.5" /> {showAiAssistant ? 'Cerrar Asistente' : '✨ Laboratorio IA'}
-                       </Button>
-                     </div>
+                     <div className="bg-muted/20 p-6 rounded-sm border mb-8">
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-bold font-headline tracking-tighter">Editor de Crónicas</h3>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Redacción y Publicación Editorial</p>
+                        </div>
+                      </div>
 
-                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 items-start">
-                        <div className={cn("space-y-8 transition-all duration-500", showAiAssistant ? "xl:col-span-7" : "xl:col-span-12")}>
-                           <Card className="rounded-sm border-border/60 shadow-xl overflow-hidden">
+                      <div className="space-y-8">
+                        <Card className="rounded-sm border-border/60 shadow-xl overflow-hidden">
                               <CardHeader className="bg-muted/10 p-8 border-b flex flex-row items-center justify-between">
                                 <CardTitle className="text-xs font-bold uppercase tracking-[0.2em]">Metadatos de la Historia</CardTitle>
                                 <Badge 
@@ -1930,67 +2559,7 @@ export default function AdminDashboard() {
                               </div>
                            </div>
                         </div>
-
-                        {showAiAssistant && (
-                          <div className="xl:col-span-5 animate-in slide-in-from-right-12 sticky top-32">
-                             <Card className="rounded-sm border-primary/20 shadow-2xl overflow-hidden bg-muted/5">
-                                <CardHeader className="bg-primary text-white p-6">
-                                   <div className="flex items-center gap-3">
-                                      <Sparkles className="h-5 w-5" />
-                                      <div className="flex flex-col">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Laboratorio Editorial IA</span>
-                                        <span className="text-[8px] opacity-70 tracking-widest uppercase">Asistente de Refinamiento Narrativo</span>
-                                      </div>
-                                   </div>
-                                </CardHeader>
-                                <CardContent className="p-8 space-y-8">
-                                   <div className="space-y-4">
-                                      <Label className="text-[10px] font-bold uppercase opacity-60">Borrador o Ideas Técnicas</Label>
-                                      <Textarea 
-                                        value={aiInput} 
-                                        onChange={e => setAiInput(e.target.value)} 
-                                        className="min-h-[250px] bg-white text-sm leading-relaxed" 
-                                        placeholder="Pega aquí tus ideas sueltas, notas de campo o borradores técnicos para que la IA los transforme en crónica..."
-                                      />
-                                   </div>
-                                   
-                                   <Button 
-                                    className="w-full h-14 bg-primary text-white text-[10px] font-bold uppercase tracking-widest" 
-                                    onClick={handleAiRefinement} 
-                                    disabled={isAiLoading}
-                                   >
-                                      {isAiLoading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Refinar Narrativa Editorial'}
-                                   </Button>
-
-                                   {aiResult && (
-                                     <div className="space-y-6 animate-in fade-in duration-700 pt-6 border-t border-primary/10">
-                                        <div className="space-y-3">
-                                          <span className="text-[9px] font-bold text-primary uppercase tracking-[0.3em]">Resultado Sugerido:</span>
-                                          <ScrollArea className="h-[300px] w-full p-6 bg-white border border-primary/10 rounded-sm">
-                                             <div className="prose prose-sm font-light text-foreground/80 leading-relaxed italic">
-                                               &ldquo;{aiResult.refinedText}&rdquo;
-                                             </div>
-                                             <div className="mt-8 pt-6 border-t border-dashed">
-                                                <span className="text-[9px] font-bold uppercase tracking-widest block mb-4">Insight Regenerativo:</span>
-                                                <p className="text-sm font-headline italic text-primary">&ldquo;{aiResult.regenerativeInsight}&rdquo;</p>
-                                             </div>
-                                          </ScrollArea>
-                                        </div>
-                                        <Button 
-                                          variant="secondary" 
-                                          className="w-full h-12 gap-3 text-[9px] font-bold uppercase"
-                                          onClick={transferAiToEditor}
-                                        >
-                                          <Copy className="h-3.5 w-3.5" /> Transferir al Editor Principal
-                                        </Button>
-                                     </div>
-                                   )}
-                                </CardContent>
-                             </Card>
-                          </div>
-                        )}
-                     </div>
-                   </div>
+                      </div>
                  )}
 
                  {activeForm === 'project' && (
@@ -2131,13 +2700,117 @@ export default function AdminDashboard() {
                         />
                       </div>
 
-                      <div className="flex gap-4 pt-4">
+                       <div className="flex gap-4 pt-4">
                         <Button 
                           className="flex-1 h-16 bg-primary text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/90 shadow-md" 
                           onClick={saveResource} 
                           disabled={isSaving}
                         >
                           {isSaving ? 'Guardando...' : (editingId ? 'Actualizar Recurso' : 'Guardar y Publicar Recurso')}
+                        </Button>
+                        <Button variant="ghost" onClick={cancelEditing}>Cancelar</Button>
+                      </div>
+                   </Card>
+                 )}
+
+                 {activeForm === 'video' && (
+                   <Card className="p-10 space-y-8 shadow-xl animate-in slide-in-from-right-8">
+                      <div className="flex items-center gap-4 border-b pb-6">
+                        <Video className="h-6 w-6 text-primary" />
+                        <div>
+                          <h3 className="text-xl font-bold font-headline">
+                            {editingId ? 'Editar Video Multimedia' : 'Nuevo Video / Diálogo Audiovisual'}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Publica conferencias, cápsulas y diálogos audiovisuales que se proyectarán en /multimedia.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-bold uppercase">Título del Video *</Label>
+                          <Input 
+                            value={vidTitle} 
+                            onChange={e => setVidTitle(e.target.value)} 
+                            placeholder="Ej: Diálogo sobre Gobernanza Territorial" 
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-bold uppercase">Plataforma</Label>
+                          <Input 
+                            value={vidPlatform} 
+                            onChange={e => setVidPlatform(e.target.value)} 
+                            placeholder="YouTube, Vimeo, etc." 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-bold uppercase">Enlace o URL del Video (YouTube / Web) *</Label>
+                        <Input 
+                          value={vidUrl} 
+                          onChange={e => setVidUrl(e.target.value)} 
+                          placeholder="https://www.youtube.com/watch?v=0DmyalU2zL4" 
+                          className="font-mono text-xs"
+                        />
+                      </div>
+
+                      {vidUrl && (
+                        <div className="p-4 bg-muted/20 border rounded-sm flex items-center gap-4">
+                          {extractYouTubeId(vidUrl) ? (
+                            <>
+                              <div className="relative w-28 aspect-video rounded overflow-hidden bg-black flex-shrink-0">
+                                <Image 
+                                  src={`https://img.youtube.com/vi/${extractYouTubeId(vidUrl)}/mqdefault.jpg`} 
+                                  alt="Preview" 
+                                  fill 
+                                  className="object-cover" 
+                                  referrerPolicy="no-referrer" 
+                                />
+                              </div>
+                              <div className="text-xs">
+                                <p className="font-semibold text-emerald-600 dark:text-emerald-400">ID de YouTube detectado:</p>
+                                <code className="text-muted-foreground">{extractYouTubeId(vidUrl)}</code>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">URL de video no identificada como YouTube directo; se reproducirá por enlace externo.</p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-bold uppercase">Estado Editorial</Label>
+                        <div className="flex gap-4">
+                          <Button 
+                            type="button" 
+                            variant={vidStatus === 'published' ? 'default' : 'outline'} 
+                            size="sm"
+                            onClick={() => setVidStatus('published')}
+                            className="text-xs"
+                          >
+                            Publicado Inmediatamente
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant={vidStatus === 'draft' ? 'default' : 'outline'} 
+                            size="sm"
+                            onClick={() => setVidStatus('draft')}
+                            className="text-xs"
+                          >
+                            Guardar como Borrador Interno
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                        <Button 
+                          className="flex-1 h-16 bg-primary text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/90 shadow-md" 
+                          onClick={saveVideo} 
+                          disabled={isSaving}
+                        >
+                          {isSaving ? 'Guardando...' : (editingId ? 'Actualizar Video' : 'Guardar y Publicar Video')}
                         </Button>
                         <Button variant="ghost" onClick={cancelEditing}>Cancelar</Button>
                       </div>

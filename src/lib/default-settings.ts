@@ -48,8 +48,31 @@ export interface SiteSettings {
   footerDescription: string;
   footerCopyright: string;
 
+  // NAVEGACIÓN
+  navLinks?: Array<{ name: string; href: string }>;
+
+  // ALIASES COMPATIBILIDAD
+  heroHighlight1?: string;
+  heroHighlight2?: string;
+  heroPrimaryBtnText?: string;
+  heroPrimaryBtnLink?: string;
+  heroSecondaryBtnText?: string;
+  heroSecondaryBtnLink?: string;
+  missionImageUrl?: string;
+  missionDescription?: string;
+
   updatedAt?: any;
 }
+
+export const defaultNavLinks = [
+  { name: 'Mirada', href: '/conciencia' },
+  { name: 'Áreas', href: '/experiencia' },
+  { name: 'Proyectos', href: '/proyectos' },
+  { name: 'Insights', href: '/blog' },
+  { name: 'Multimedia', href: '/multimedia' },
+  { name: 'Recursos', href: '/recursos' },
+  { name: 'Contacto', href: '/contacto' },
+];
 
 export const defaultSiteSettings: SiteSettings = {
   // HERO & PORTADA
@@ -96,7 +119,8 @@ export const defaultSiteSettings: SiteSettings = {
   // FOOTER & BRANDING
   footerMotto: 'Narrativas. Confianza. Participación. Impacto.',
   footerDescription: 'Laboratorio estratégico y editorial que ayuda a transformar conocimiento, propósito y estrategia en narrativas capaces de generar comprensión y acción.',
-  footerCopyright: 'THE OTHER NARRATIVE | NARRATIVAS QUE GENERAN CONFIANZA.'
+  footerCopyright: 'THE OTHER NARRATIVE | NARRATIVAS QUE GENERAN CONFIANZA.',
+  navLinks: defaultNavLinks
 };
 
 /**

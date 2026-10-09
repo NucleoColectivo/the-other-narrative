@@ -100,8 +100,9 @@ export default function RecursosPage() {
 
   const { data: firestoreResources, isLoading } = useCollection(resourcesQuery);
 
+  const publishedFirestoreResources = (firestoreResources || []).filter((r: any) => r.status !== 'draft');
   const rawResources: ResourceItem[] = (firestoreResources && firestoreResources.length > 0)
-    ? firestoreResources as unknown as ResourceItem[]
+    ? (isAdmin ? firestoreResources : publishedFirestoreResources) as unknown as ResourceItem[]
     : defaultResources;
 
   const categories = Array.from(new Set([
