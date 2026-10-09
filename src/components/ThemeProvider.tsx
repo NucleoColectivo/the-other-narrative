@@ -12,26 +12,14 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('editorial');
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') as Theme;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
-
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('theme-editorial', 'theme-digital', 'theme-ocean', 'theme-gold');
-    if (theme !== 'editorial') {
-      root.classList.add(`theme-${theme}`);
-    }
-    localStorage.setItem('app-theme', theme);
-  }, [theme]);
+    localStorage.setItem('app-theme', 'editorial');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme: 'editorial', setTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

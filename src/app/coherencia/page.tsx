@@ -11,20 +11,20 @@ export default function CoherenciaPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      <section className="relative h-[70vh] w-full flex items-end pb-24 overflow-hidden border-b bg-black">
+      <section className="relative h-[70vh] w-full flex items-end pb-24 overflow-hidden border-b bg-white">
         <div className="absolute inset-0 z-0">
           <Image
-            src={bannerImage?.imageUrl || 'https://images.pexels.com/photos/927414/pexels-photo-927414.jpeg'}
+            src={bannerImage?.imageUrl || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/12%20formacion_y_capacitacion.png'}
             alt="Formación y Propósito"
             fill
-            className="object-cover opacity-75 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
+            className="object-cover opacity-95 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
             priority
           />
         </div>
-        <div className="section-container relative z-10 w-full text-white">
+        <div className="section-container relative z-10 w-full text-foreground">
           <span className="text-primary font-bold tracking-[0.5em] uppercase text-[10px] mb-8 block animate-in slide-in-from-bottom-4 duration-700">Capítulo 05</span>
           <div className="max-w-4xl animate-in slide-in-from-bottom-8 duration-1000">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-8 tracking-tighter text-white">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-8 tracking-tighter text-foreground">
               Integridad & <br />
               <span className="italic font-normal text-primary">Coherencia.</span>
             </h1>
@@ -42,14 +42,14 @@ export default function CoherenciaPage() {
               </div>
               <h3 className="text-3xl font-bold font-headline tracking-tighter">Maquillaje o Verdad</h3>
               <p className="text-xl font-light text-foreground/70 leading-relaxed italic">
-                La integridad organizacional no es una opción estética, es el único valor innegociable que garantiza la sostenibilidad a largo plazo.
+                La integridad organizacional no es una opción estética, es el único valor innegociable que garantiza la regeneración a largo plazo.
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                 <div className="space-y-6">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary border-b pb-2">Conferencias</h4>
                   <ul className="space-y-3 text-sm font-light text-foreground/60 italic leading-relaxed">
-                    <li>• Cómo comunicar la sostenibilidad</li>
+                    <li>• Cómo comunicar la regeneración</li>
                     <li>• Periodismo de soluciones</li>
                     <li>• Narrativas que generan confianza</li>
                     <li>• Comunicación responsable</li>

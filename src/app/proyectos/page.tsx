@@ -11,7 +11,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ProyectosPage() {
   const firestore = useFirestore();
-  const bannerImage = PlaceHolderImages.find(img => img.id === 'experiencia-bg');
+  const bannerImage = PlaceHolderImages.find(img => img.id === 'proyectos-bg');
 
   const projectsQuery = useMemoFirebase(() => query(collection(firestore, 'projects')), [firestore]);
   const { data: projects, isLoading } = useCollection(projectsQuery);
@@ -20,20 +20,20 @@ export default function ProyectosPage() {
     {
       id: 'mock-p1',
       title: 'Estrategia COP16: Diálogos de Cambio',
-      category: 'Sostenibilidad',
+      category: 'Regeneración',
       description: 'Construcción de la narrativa estratégica para el Hub de Comunicación Responsable durante la cumbre de biodiversidad más importante del mundo.',
-      image: 'https://images.pexels.com/photos/13730514/pexels-photo-13730514.jpeg',
-      link: '#',
+      image: 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/03.png',
+      link: '/multimedia',
       ods: [16, 17, 10]
     },
     {
       id: 'mock-p2',
-      title: 'Narrativas para el Pacto Global',
-      category: 'Estrategia',
-      description: 'Refinamiento editorial y construcción de mensajes clave para la Red Colombia del Pacto Global de las Naciones Unidas.',
-      image: 'https://images.pexels.com/photos/631909/pexels-photo-631909.jpeg',
-      link: '#',
-      ods: [17, 4, 16]
+      title: 'Laboratorio de Narrativas & Archivo Vivo',
+      category: 'Ecosistema Transmedia',
+      description: 'Diseño de infraestructuras narrativas, laboratorios transmedia y espacios de aprendizaje colaborativo para articular diálogos de impacto, territorio e inteligencia colectiva.',
+      image: 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/05.png',
+      link: '/multimedia',
+      ods: [4, 11, 16, 17]
     }
   ];
 
@@ -41,22 +41,22 @@ export default function ProyectosPage() {
 
   return (
     <main className="bg-background min-h-screen">
-      <section className="relative h-[60vh] sm:h-[70vh] w-full flex items-end pb-16 sm:pb-24 overflow-hidden border-b bg-black">
+      <section className="relative h-[60vh] sm:h-[70vh] w-full flex items-end pb-16 sm:pb-24 overflow-hidden border-b bg-white">
         <div className="absolute inset-0 z-0">
           <Image
-            src={bannerImage?.imageUrl || 'https://images.pexels.com/photos/631909/pexels-photo-631909.jpeg'}
+            src={bannerImage?.imageUrl || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/banners/banners_03%20proyectos.png'}
             alt="Proyectos"
             fill
-            className="object-cover opacity-75 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
+            className="object-cover opacity-95 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
             priority
           />
         </div>
-        <div className="section-container relative z-10 w-full text-white">
+        <div className="section-container relative z-10 w-full text-foreground">
           <span className="text-primary font-bold tracking-[0.6em] uppercase text-[9px] sm:text-[10px] mb-6 sm:mb-8 block animate-in slide-in-from-bottom-4 duration-700">
             Portafolio Técnico
           </span>
           <div className="max-w-4xl animate-in slide-in-from-bottom-8 duration-1000">
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-6 sm:mb-8 tracking-tighter text-white">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-6 sm:mb-8 tracking-tighter text-foreground">
               Casos en <br />
               <span className="italic font-normal text-primary">Acción.</span>
             </h1>
@@ -80,7 +80,7 @@ export default function ProyectosPage() {
               >
                 <div className="relative aspect-[16/10] overflow-hidden rounded-sm bg-muted shadow-sm group-hover:shadow-2xl transition-all duration-700">
                   <Image
-                    src={project.image || 'https://images.pexels.com/photos/1190906/pexels-photo-1190906.jpeg'}
+                    src={project.image || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/06.png'}
                     alt={project.title}
                     fill
                     className="object-cover transition-all duration-1000 scale-100 group-hover:scale-105"
@@ -108,7 +108,7 @@ export default function ProyectosPage() {
                         {project.ods.map((odsNum: number) => (
                           <div key={odsNum} className="w-14 h-14 md:w-16 md:h-16 bg-white border border-border/20 rounded-sm p-1 shadow-lg transition-transform hover:scale-110 cursor-help" title={`Contribuye al ODS ${odsNum}`}>
                             <Image 
-                              src={`https://raw.githubusercontent.com/nucleocolectivoart2/the-other-narrative/main/ODS/S-WEB-Goal-${odsNum.toString().padStart(2, '0')}.png`}
+                              src={`/ODS/S-WEB-Goal-${odsNum.toString().padStart(2, '0')}.png`}
                               alt={`ODS ${odsNum}`}
                               width={64}
                               height={64}
@@ -124,10 +124,11 @@ export default function ProyectosPage() {
                     {project.link && (
                       <Link 
                         href={project.link} 
-                        target="_blank" 
-                        className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-3 hover:gap-5 transition-all"
+                        target={project.link.startsWith('http') ? "_blank" : undefined}
+                        rel={project.link.startsWith('http') ? "noopener noreferrer" : undefined}
+                        className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-all group/btn"
                       >
-                        VER DETALLES <ExternalLink className="h-3 w-3" />
+                        EXPLORAR MULTIMEDIA {project.link.startsWith('http') ? <ExternalLink className="h-3 w-3" /> : <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1.5 transition-transform" />}
                       </Link>
                     )}
                   </div>

@@ -11,20 +11,20 @@ export default function ResonanciaPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      <section className="relative h-[70vh] w-full flex items-end pb-24 overflow-hidden border-b bg-black">
+      <section className="relative h-[70vh] w-full flex items-end pb-24 overflow-hidden border-b bg-white">
         <div className="absolute inset-0 z-0">
           <Image
-            src={bannerImage?.imageUrl || 'https://images.pexels.com/photos/1190906/pexels-photo-1190906.jpeg'}
+            src={bannerImage?.imageUrl || 'https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/banners/banners_05%20multimedia.png'}
             alt="Laboratorio Editorial"
             fill
-            className="object-cover opacity-75 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
+            className="object-cover opacity-95 transition-all duration-[5000ms] animate-in fade-in zoom-in-110"
             priority
           />
         </div>
-        <div className="section-container relative z-10 w-full text-white">
+        <div className="section-container relative z-10 w-full text-foreground">
           <span className="text-primary font-bold tracking-[0.5em] uppercase text-[10px] mb-8 block animate-in slide-in-from-bottom-4 duration-700">Capítulo 04</span>
           <div className="max-w-4xl animate-in slide-in-from-bottom-8 duration-1000">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-8 tracking-tighter text-white">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-headline leading-[0.9] mb-8 tracking-tighter text-foreground">
               Laboratorio <br />
               <span className="italic font-normal text-primary">Editorial.</span>
             </h1>
@@ -68,6 +68,18 @@ export default function ResonanciaPage() {
               </p>
               <div className="space-y-4">
                 <a 
+                  href="https://open.spotify.com/show/033PCu2aysmpjGuazxZ0Oz" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-6 border border-white/10 hover:bg-white/5 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <Mic2 className="h-5 w-5 text-primary" />
+                    <span className="text-xs font-bold uppercase tracking-widest">The Other Narrative</span>
+                  </div>
+                  <ExternalLink className="h-4 w-4 opacity-40 group-hover:opacity-100" />
+                </a>
+                <a 
                   href="https://open.spotify.com/show/4fIwE8OUNlJkszY6XQZcO5" 
                   target="_blank" 
                   rel="noopener noreferrer"
@@ -75,7 +87,7 @@ export default function ResonanciaPage() {
                 >
                   <div className="flex items-center gap-4">
                     <Mic2 className="h-5 w-5 text-primary" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Escuchar Podcast</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Planeta Sostenible</span>
                   </div>
                   <ExternalLink className="h-4 w-4 opacity-40 group-hover:opacity-100" />
                 </a>

@@ -2,17 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Palette, Check } from 'lucide-react';
-import { useTheme, type Theme } from '@/components/ThemeProvider';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { name: 'Mirada', href: '/conciencia' },
@@ -23,17 +15,11 @@ const navLinks = [
   { name: 'Contacto', href: '/contacto' },
 ];
 
-const themes: { name: string; value: Theme; color: string }[] = [
-  { name: 'Editorial', value: 'editorial', color: 'bg-[#C05A3B]' },
-  { name: 'Digital', value: 'digital', color: 'bg-[#B7DA2D]' },
-  { name: 'Celeste', value: 'ocean', color: 'bg-[#00BFFF]' },
-  { name: 'Aurea', value: 'gold', color: 'bg-[#D4AF37]' },
-];
-
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,6 +37,8 @@ export function Navbar() {
     }
   }, [isOpen]);
 
+  const isLightNav = scrolled || isOpen || !isHomePage;
+
   return (
     <>
       <header className={cn(
@@ -62,12 +50,30 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link 
             href="/" 
-            className={cn(
-              "text-base sm:text-lg font-bold font-headline tracking-tighter lowercase z-[70] transition-colors duration-500",
-              scrolled || isOpen ? "text-foreground" : "text-white"
-            )}
+            className="relative z-[70] flex items-center h-8 sm:h-9 w-36 sm:w-48 transition-all duration-500 hover:opacity-90"
           >
-            the other narrative.
+            {/* White Logo (for dark background) */}
+            <Image
+              src="https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/para%20fondo%20negro/Recurso%2021.png"
+              alt="The Other Narrative"
+              fill
+              priority
+              className={cn(
+                "object-contain object-left transition-opacity duration-500",
+                isLightNav ? "opacity-0 pointer-events-none" : "opacity-100"
+              )}
+            />
+            {/* Dark Logo (logo7.png for white navbar) */}
+            <Image
+              src="https://raw.githubusercontent.com/nucleocolectivoart2/The-other-narrative/main/img/logo7.png"
+              alt="The Other Narrative"
+              fill
+              priority
+              className={cn(
+                "object-contain object-left transition-opacity duration-500",
+                isLightNav ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+            />
           </Link>
           
           <div className="flex items-center space-x-2 sm:space-x-8">
@@ -78,8 +84,8 @@ export function Navbar() {
                     <Link
                       href={link.href}
                       className={cn(
-                        "text-[9px] font-bold tracking-[0.25em] uppercase transition-all duration-500 hover:text-primary",
-                        scrolled ? "text-foreground/60" : "text-white/80"
+                        "text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase transition-all duration-500 hover:text-primary",
+                        isLightNav ? "text-foreground/75 hover:text-primary" : "text-white/80 hover:text-white"
                       )}
                     >
                       {link.name}
@@ -89,39 +95,6 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={cn(
-                    "p-2 rounded-full transition-all duration-500 hover:bg-primary/10 group focus:outline-none",
-                    scrolled || isOpen ? "text-foreground/60" : "text-white/80"
-                  )}
-                  title="Cambiar paleta cromática"
-                >
-                  <Palette className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-background border-border rounded-sm p-2 shadow-2xl">
-                <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">
-                  Paletas Editoriales
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-border/40" />
-                {themes.map((t) => (
-                  <DropdownMenuItem
-                    key={t.value}
-                    onClick={() => setTheme(t.value)}
-                    className="flex items-center justify-between px-3 py-2.5 cursor-pointer rounded-sm hover:bg-muted/50 transition-colors focus:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn("h-3 w-3 rounded-full border border-black/10", t.color)} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{t.name}</span>
-                    </div>
-                    {theme === t.value && <Check className="h-3 w-3 text-primary" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 z-[70] group focus:outline-none"
@@ -130,15 +103,15 @@ export function Navbar() {
               <div className="relative w-5 h-4 flex flex-col justify-between items-end">
                 <span className={cn(
                   "h-[1.5px] transition-all duration-500 ease-in-out",
-                  isOpen ? "w-5 absolute top-1/2 -rotate-45 bg-foreground" : cn("w-5", scrolled ? "bg-foreground" : "bg-white")
+                  isOpen ? "w-5 absolute top-1/2 -rotate-45 bg-foreground" : cn("w-5", isLightNav ? "bg-foreground" : "bg-white")
                 )} />
                 <span className={cn(
                   "h-[1.5px] transition-all duration-300 ease-in-out",
-                  isOpen ? "opacity-0 w-0 bg-foreground" : cn("w-3", scrolled ? "bg-foreground" : "bg-white")
+                  isOpen ? "opacity-0 w-0 bg-foreground" : cn("w-3", isLightNav ? "bg-foreground" : "bg-white")
                 )} />
                 <span className={cn(
                   "h-[1.5px] transition-all duration-500 ease-in-out",
-                  isOpen ? "w-5 absolute top-1/2 rotate-45 bg-foreground" : cn("w-1", scrolled ? "bg-foreground" : "bg-white")
+                  isOpen ? "w-5 absolute top-1/2 rotate-45 bg-foreground" : cn("w-1", isLightNav ? "bg-foreground" : "bg-white")
                 )} />
               </div>
             </button>
