@@ -2,7 +2,7 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  allowedDevOrigins: ['*.run.app', 'localhost:3000'],
+  allowedDevOrigins: ['*.run.app', '*.us-east1.run.app', 'localhost:3000'],
   typescript: {
     ignoreBuildErrors: true,
   },
